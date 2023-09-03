@@ -1,0 +1,63 @@
+{
+	"categories": {
+        "sexual": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "hate": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "harassment": {
+			"enabled": false,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "self-harm": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "sexual/minors": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "hate/threatening": {
+			"enabled": false,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "violence/graphic": {
+			"enabled": false,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "self-harm/intent": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "self-harm/instructions": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "harassment/threatening": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		},
+        "violence": {
+			"enabled": true,
+			"whitelist": [],
+			"punishment": "delete"
+		}
+    },
+	"openai_token": "",
+	"discord_token": "",
+	"log_channel": "",
+	"mod_log": ""
+}
