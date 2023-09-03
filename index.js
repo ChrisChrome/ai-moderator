@@ -54,6 +54,7 @@ client.on('ready', async () => {
 client.on('messageCreate', async (message) => {
 	if (message.author.bot) return;
 	if (message.channel.type === "DM") return;
+	if (!message.content) return; // If the message is empty, don't do anything
 	let results = await openai.moderations.create({ input: message.content });
 
 	if (!results.results[0].flagged) return; // No need to do anything if the message isn't flagged
