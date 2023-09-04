@@ -1,22 +1,27 @@
 const config = require('./config.json');
 const colors = require('colors');
 const Discord = require('discord.js');
+const {
+	REST,
+	Routes
+} = require('discord.js');
+const rest = new REST({
+	version: '10'
+}).setToken(config.discord_token);
 const OpenAI = require("openai");
 const client = new Discord.Client({
 	intents: ['GuildMessages', "MessageContent", "Guilds", "GuildMembers"],
 });
 const openai = new OpenAI({ apiKey: config.openai_token });
+const dbConn = require('node-json-db').JsonDB;
+const dbConfig = require('node-json-db/dist/lib/JsonDBConfig').Config;
+const db = new dbConn(new dbConfig("database", true, true, '/'));
 
-var logChannel;
 var sendLog;
 var logMsg = null; // Used to store the log message, so it can be edited instead of sending a new one
 var curMsg = ""; // Used to calculate the length of the log message, so it can be edited instead of sending a new one
 var logChannel;
 client.on('ready', async () => {
-	client.channels.fetch(config.mod_log).then((channel) => {
-		logChannel = channel;
-	});
-
 	await client.channels.fetch(config.log_channel).then(async (channel) => {
 		await channel.send(`\`\`\`ansi\n${curMsg}\`\`\``).then((msg) => {
 			logMsg = msg;
@@ -36,6 +41,24 @@ client.on('ready', async () => {
 			console.log(message);
 		};
 
+		console.log(`${colors.cyan("[INFO]")} Loading Commands...`)
+		const commands = require('./commands.json');
+		await (async () => {
+			try {
+				console.log(`${colors.cyan("[INFO]")} Registering Commands...`)
+				let start = Date.now()
+				//Globally
+				console.log(`${colors.cyan("[INFO]")} Registering Global Commands...`);
+				await rest.put(
+					Routes.applicationCommands(client.user.id), {
+					body: commands
+				});
+				console.log(`${colors.cyan("[INFO]")} Successfully registered commands. Took ${colors.green((Date.now() - start) / 1000)} seconds.`);
+			} catch (error) {
+				console.error(error);
+			}
+		})();
+
 		sendLog(`${colors.cyan("[INFO]")} Logged in as ${client.user.displayName}!`);
 
 		client.user.setPresence({
@@ -51,6 +74,28 @@ client.on('ready', async () => {
 
 });
 
+client.on('interactionCreate', async (interaction) => {
+	if (!interaction.isCommand()) return;
+	switch (interaction.commandName) {
+		case "config":
+			switch (interaction.options.getSubcommand()) {
+				case "logs":
+					if (!interaction.member.permissions.has("MANAGE_GUILD")) {
+						await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
+						return;
+					}
+					let channel = interaction.options.getChannel("channel");
+					if (!channel) {
+						await interaction.reply({ content: "Please specify a channel.", ephemeral: true });
+						return;
+					}
+					db.push(`guilds/${interaction.guildId}/log_channel`, channel.id, true);
+					await interaction.reply({ content: `Set log channel to ${channel}.`, ephemeral: true });
+					break;
+			};
+			break;
+	}
+});
 client.on('messageCreate', async (message) => {
 	if (message.author.bot) return;
 	if (message.channel.type === "DM") return;
@@ -89,58 +134,65 @@ client.on('messageCreate', async (message) => {
 		if (config.categories[category].whitelist.includes(message.channel.parentId)) continue; // If the category is whitelisted, skip it
 		flaggedCategories[category] = config.categories[category].punishment;
 	}
+	logChannel = db.getData(`guilds/${message.guildId}/log_channel`)
 	// Get a list of punishments, one per type
 	let punishments = Object.values(flaggedCategories);
 	if (punishments.includes("ban")) {
 		message.delete();
 		message.member.ban({ reason: `Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.` });
-		logChannel.send({
-			embeds: [{
-				title: "User Banned",
-				description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
-				color: 0xff0000,
-				timestamp: new Date(),
-				fields: [
-					{
-						name: "Message",
-						value: message.content
-					}
-				]
-			}]
-		})
+		if (logChannel) {
+			logChannel.send({
+				embeds: [{
+					title: "User Banned",
+					description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
+					color: 0xff0000,
+					timestamp: new Date(),
+					fields: [
+						{
+							name: "Message",
+							value: message.content
+						}
+					]
+				}]
+			})
+		}
 	} else if (punishments.includes("kick")) {
 		message.delete();
 		message.member.kick({ reason: `Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.` });
-		logChannel.send({
-			embeds: [{
-				title: "User Kicked",
-				description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
-				color: 0xff0000,
-				timestamp: new Date(),
-				fields: [
-					{
-						name: "Message",
-						value: message.content
-					}
-				]
-			}]
-		})
+		if (logChannel) {
+			logChannel.send({
+				embeds: [{
+					title: "User Kicked",
+					description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
+					color: 0xff0000,
+					timestamp: new Date(),
+					fields: [
+						{
+							name: "Message",
+							value: message.content
+						}
+					]
+				}]
+			})
+		}
 	} else if (punishments.includes("delete")) {
 		message.delete({ reason: `Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.` });
-		logChannel.send({
-			embeds: [{
-				title: "Message Deleted",
-				description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
-				color: 0xff0000,
-				timestamp: new Date(),
-				fields: [
-					{
-						name: "Message",
-						value: message.content
-					}
-				]
-			}]
-		})
+		if (logChannel) {
+			logChannel.send({
+				embeds: [{
+					title: "Message Deleted",
+					description: `**User:** ${message.author}\n**Channel:** ${message.channel}\n**Reason:** Message flagged for ${Object.keys(flaggedCategories).join(", ")} content.`,
+					color: 0xff0000,
+					timestamp: new Date(),
+					fields: [
+						{
+							name: "Message",
+							value: message.content
+						}
+					]
+				}]
+			})
+		}
 	}
 
 });
