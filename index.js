@@ -89,7 +89,7 @@ client.on('interactionCreate', async (interaction) => {
 						await interaction.reply({ content: "Please specify a channel.", ephemeral: true });
 						return;
 					}
-					db.push(`guilds/${interaction.guildId}/log_channel`, channel.id, true);
+					db.push(`/guilds/${interaction.guildId}/log_channel`, channel.id, true);
 					await interaction.reply({ content: `Set log channel to ${channel}.`, ephemeral: true });
 					break;
 			};
@@ -134,7 +134,9 @@ client.on('messageCreate', async (message) => {
 		if (config.categories[category].whitelist.includes(message.channel.parentId)) continue; // If the category is whitelisted, skip it
 		flaggedCategories[category] = config.categories[category].punishment;
 	}
-	logChannel = db.getData(`guilds/${message.guildId}/log_channel`)
+	await db.getData(`/guilds/${message.guildId}/log_channel`).then((channelId) => {
+		logChannel = client.channels.cache.get(channelId);
+	});
 	// Get a list of punishments, one per type
 	let punishments = Object.values(flaggedCategories);
 	if (punishments.includes("ban")) {
