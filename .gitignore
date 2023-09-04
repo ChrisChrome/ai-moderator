@@ -132,4 +132,3 @@ dist
 config*
 !config.json.default
 database.json
-commands.json
