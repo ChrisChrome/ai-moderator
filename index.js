@@ -152,7 +152,7 @@ client.on('messageCreate', async (message) => {
 					fields: [
 						{
 							name: "Message",
-							value: message.content
+							value: message.content.substring(0, 1024)
 						}
 					]
 				}]
@@ -171,7 +171,8 @@ client.on('messageCreate', async (message) => {
 					fields: [
 						{
 							name: "Message",
-							value: message.content
+							// Truncate the message to 1024 characters, the max for an embed field
+							value: message.content.substring(0, 1024)
 						}
 					]
 				}]
@@ -189,7 +190,7 @@ client.on('messageCreate', async (message) => {
 					fields: [
 						{
 							name: "Message",
-							value: message.content
+							value: message.content.substring(0, 1024)
 						}
 					]
 				}]
